@@ -1,0 +1,56 @@
+name: resumevault development env React App on AWS-S3 through Cloudfront
+on:
+ push:
+   branches:
+     - development
+   paths-ignore:
+     - README.md
+jobs:
+ Deploy:
+   runs-on: ubuntu-latest
+   env:
+     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+     BRANCH: ${{ secrets.BRANCH }}
+     COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+   steps:
+     - name: Checkout
+       uses: actions/checkout@v3
+
+     - name: Setup node
+       uses: actions/setup-node@v3
+       with:
+          node-version-file: '.nvmrc'
+
+     - name: Install dependencies
+       run: npm install
+
+     - name: Build static file
+       run: CI=false npm run build
+
+     - name: Configure AWS Credentials
+       uses: aws-actions/configure-aws-credentials@v1
+       with:
+         aws-access-key-id: ${{ secrets.ACCESS_KEY }}
+         aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+         aws-region: us-east-1
+
+     - name: Delete Old Build in S3
+       run: aws s3 rm s3://resumevault-frontend --recursive
+       
+     - name: Update New Build to S3
+       run: aws s3 sync ./out/ s3://resumevault-frontend/ --delete --acl public-read 
+      
+     - name: Update Cloudfront with New-Build
+       run: aws cloudfront create-invalidation --distribution-id E4LFNO8B1F0AS --paths '/*'
+     
+     - name: Slack Notification
+       uses: act10ns/slack@v1
+       with: 
+         status: ${{ job.status }}
+         channel: '#deployment-alerts'
+         message: |
+           Workflow initiated by: {{ env.GITHUB_ACTOR }} 
+           Repository:  {{ env.GITHUB_REPOSITORY }}
+           Branch:  {{ env.GITHUB_REF_NAME }}
+           Commit Message: {{ env.COMMIT_MESSAGE }}
+       if: always()
