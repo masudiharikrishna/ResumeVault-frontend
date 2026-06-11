@@ -38,7 +38,7 @@ jobs:
        run: aws s3 rm s3://resumevault-frontend --recursive
        
      - name: Update New Build to S3
-       run: aws s3 sync ./out/ s3://resumevault-frontend/ --delete --acl public-read 
+       run: aws s3 sync ./out/ s3://resumevault-frontend/ --delete
       
      - name: Update Cloudfront with New-Build
        run: aws cloudfront create-invalidation --distribution-id E4LFNO8B1F0AS --paths '/*'
