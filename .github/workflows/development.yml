@@ -32,7 +32,7 @@ jobs:
        with:
          aws-access-key-id: ${{ secrets.ACCESS_KEY }}
          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
-         aws-region: us-east-1
+         aws-region: ap-south-1
 
      - name: Delete Old Build in S3
        run: aws s3 rm s3://resumevault-frontend --recursive
