@@ -4,7 +4,10 @@ import { useState } from "react";
 import { 
   FileText, Download, Share2, Trash2, Eye, Check, Mail 
 } from "lucide-react";
-
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import axios from "axios";
+import { API_ENDPOINTS } from "@/constants/api";
 
 interface ResumeData {
   id: string;
@@ -13,8 +16,11 @@ interface ResumeData {
   size: string;
   updatedAt: string;
   type?: "resume" | "cover-letter";
+  fileUrl?: string;
+  s3Key?: string;
+  iv?: string;
+  mimeType?: string;
 }
-
 
 interface ResumeCardProps {
   resume: ResumeData;
@@ -28,23 +34,76 @@ export default function ResumeCard({ resume, onPreview, onDelete }: ResumeCardPr
   const [sharing, setSharing] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
 
+  const authState = useSelector((state: RootState) => state.AuthReducer);
+  const token = authState.userData?.token;
+
   const handleDownload = () => {
+    if (!resume.s3Key && !resume.fileUrl) {
+      alert("Download not available for demo items");
+      return;
+    }
+
     setDownloading(true);
-    setTimeout(() => {
+
+    if (resume.fileUrl) {
+      const link = document.createElement("a");
+      link.href = resume.fileUrl;
+      link.download = resume.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       setDownloading(false);
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 2000);
-    }, 1500);
+      return;
+    }
+
+    if (!token) {
+      alert("Session expired. Please log in again.");
+      setDownloading(false);
+      return;
+    }
+
+    axios
+      .get(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(resume.id), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      })
+      .then((response) => {
+        const url = URL.createObjectURL(response.data);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = resume.fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        setDownloading(false);
+        setDownloadSuccess(true);
+        setTimeout(() => setDownloadSuccess(false), 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to download document", err);
+        alert("Failed to download secure document. Please try again.");
+        setDownloading(false);
+      });
   };
 
   const handleShare = () => {
-    setSharing(true);
-    setTimeout(() => {
-      setSharing(false);
-      setShareSuccess(true);
+    try {
       navigator.clipboard.writeText(`https://resumevault.com/s/${resume.id}`);
-      setTimeout(() => setShareSuccess(false), 2500);
-    }, 1200);
+      setSharing(true);
+      setTimeout(() => {
+        setSharing(false);
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 2500);
+      }, 1200);
+    } catch (err) {
+      console.error("Failed to copy link to clipboard", err);
+    }
   };
 
   return (
@@ -96,7 +155,7 @@ export default function ResumeCard({ resume, onPreview, onDelete }: ResumeCardPr
       </div>
 
       {/* Action panel */}
-      <div className="mt-6 pt-4 border-t border-white/5 grid grid-cols-4 gap-2 items-center text-center">
+      <div className="mt-6 pt-4 border-t border-white/5 grid grid-cols-3 gap-2 items-center text-center">
         {/* Preview */}
         <button
           onClick={() => onPreview(resume)}
@@ -122,21 +181,6 @@ export default function ResumeCard({ resume, onPreview, onDelete }: ResumeCardPr
           )}
         </button>
 
-        {/* Share */}
-        <button
-          onClick={handleShare}
-          disabled={sharing}
-          title="Get Share Link"
-          className="flex h-8 items-center justify-center rounded-lg border border-white/5 hover:border-white/15 hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer"
-        >
-          {sharing ? (
-            <div className="h-3.5 w-3.5 border-t border-r border-cyber-purple animate-spin rounded-full" />
-          ) : shareSuccess ? (
-            <Check className="h-4 w-4 text-cyber-emerald" />
-          ) : (
-            <Share2 className="h-4 w-4" />
-          )}
-        </button>
 
         {/* Delete */}
         <button
