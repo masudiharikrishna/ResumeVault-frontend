@@ -34,7 +34,7 @@ const rootReducer = (state: any, action: any) => {
   if (action.type === "AuthReducer/logout") {
     storage.removeItem("persist:root");
     if (typeof window !== "undefined") {
-      window.location.reload();
+      window.location.href = "/login";
     }
     return reducers(undefined, action);
   }

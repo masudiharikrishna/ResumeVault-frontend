@@ -15,7 +15,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!authState.status || !token) {
-      router.push(ROUTES.LOGIN);
+      setIsAuthorized(false);
+      router.replace(ROUTES.LOGIN);
     } else {
       setIsAuthorized(true);
     }
@@ -41,7 +42,8 @@ export function GuestGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (authState.status && token) {
-      router.push(ROUTES.DASHBOARD);
+      setIsGuest(false);
+      router.replace(ROUTES.DASHBOARD);
     } else {
       setIsGuest(true);
     }
