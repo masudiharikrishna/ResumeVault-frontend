@@ -6,7 +6,7 @@ import { X, UploadCloud, FileText, Check } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { BackendService } from "@/utils/Backend";
-import { API_ENDPOINTS } from "@/constants/api";
+import { DOCUMENT_UPLOAD, DOCUMENTS_BASE } from "@/constants/ApiConstants";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -80,7 +80,7 @@ export default function UploadModal({ isOpen, onClose, onUploadSuccess, document
     // Upload to S3
     BackendService.Form(
       {
-        url: API_ENDPOINTS.DOCUMENTS.UPLOAD,
+        url: DOCUMENT_UPLOAD,
         accessToken: token,
         data: formData,
       },
@@ -91,7 +91,7 @@ export default function UploadModal({ isOpen, onClose, onUploadSuccess, document
           // Save Document Metadata
           BackendService.Post(
             {
-              url: API_ENDPOINTS.DOCUMENTS.BASE,
+              url: DOCUMENTS_BASE,
               accessToken: token,
               data: {
                 title: title,

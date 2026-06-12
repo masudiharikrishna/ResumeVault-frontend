@@ -7,9 +7,9 @@ import { Mail, Lock, Shield, Eye, EyeOff, ShieldAlert, ArrowLeft, Loader2, Cpu, 
 import { useDispatch } from "react-redux";
 import { login as reduxLogin } from "@/store/Reducers/AuthReducer";
 import { BackendService } from "@/utils/Backend";
-import { API_ENDPOINTS } from "@/constants/api";
+import { AUTH_LOGIN } from "@/constants/ApiConstants";
 import { ROUTES } from "@/constants/routeConstants";
-import { GuestGuard } from "@/components/auth/Guards";
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function LoginPage() {
     // Real API authorization request
     BackendService.Post(
       {
-        url: API_ENDPOINTS.AUTH.LOGIN,
+        url: AUTH_LOGIN,
         data: { email, password },
       },
       {
@@ -53,7 +53,7 @@ export default function LoginPage() {
 
 
   return (
-    <GuestGuard>
+
       <div className="min-h-screen bg-[#030307] text-[#f8fafc] grid grid-cols-1 lg:grid-cols-12 relative overflow-hidden">
       
       {/* Left Column - Visuals & Brand Info (Desktop only) */}
@@ -324,6 +324,6 @@ export default function LoginPage() {
       </div>
 
       </div>
-    </GuestGuard>
+
   );
 }

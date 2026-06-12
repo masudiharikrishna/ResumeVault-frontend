@@ -7,14 +7,14 @@ import ResumeCard from "@/components/dashboard/ResumeCard";
 import UploadModal from "@/components/dashboard/UploadModal";
 import ResumePreview from "@/components/dashboard/ResumePreview";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
-import { AuthGuard } from "@/components/auth/Guards";
+
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store/store";
 import { logout as reduxLogout, updateProfile as reduxUpdateProfile } from "@/store/Reducers/AuthReducer";
 import { BackendService } from "@/utils/Backend";
-import { API_ENDPOINTS } from "@/constants/api";
+import { DOCUMENTS_BASE, USER_PROFILE, DOCUMENT_DELETE } from "@/constants/ApiConstants";
 import { ROUTES } from "@/constants/routeConstants";
 
 interface ResumeData {
@@ -87,7 +87,7 @@ export default function DashboardPage() {
 
     BackendService.Get(
       {
-        url: API_ENDPOINTS.DOCUMENTS.BASE,
+        url: DOCUMENTS_BASE,
         accessToken: token,
         data: {
           query: searchQuery,
@@ -124,7 +124,7 @@ export default function DashboardPage() {
 
     BackendService.Get(
       {
-        url: API_ENDPOINTS.USERS.PROFILE,
+        url: USER_PROFILE,
         accessToken: token,
       },
       {
@@ -163,7 +163,7 @@ export default function DashboardPage() {
     if (resumeToDeleteId && token) {
       BackendService.Delete(
         {
-          url: API_ENDPOINTS.DOCUMENTS.DELETE(resumeToDeleteId),
+          url: DOCUMENT_DELETE(resumeToDeleteId),
           accessToken: token,
           data: {},
         },
@@ -236,7 +236,7 @@ export default function DashboardPage() {
 
     BackendService.Patch(
       {
-        url: API_ENDPOINTS.USERS.PROFILE,
+        url: USER_PROFILE,
         accessToken: token,
         data: updateData,
       },
@@ -271,7 +271,7 @@ export default function DashboardPage() {
   const filteredDocs = documents;
 
   return (
-    <AuthGuard>
+
       <div className="flex bg-[#030307] text-[#f8fafc] min-h-screen">
       
       {/* Sidebar Navigation */}
@@ -628,6 +628,6 @@ export default function DashboardPage() {
       />
 
       </div>
-    </AuthGuard>
+
   );
 }

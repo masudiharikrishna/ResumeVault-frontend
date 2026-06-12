@@ -7,7 +7,7 @@ import {
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import axios from "axios";
-import { API_ENDPOINTS } from "@/constants/api";
+import { DOCUMENT_DOWNLOAD } from "@/constants/ApiConstants";
 
 interface ResumeData {
   id: string;
@@ -65,7 +65,7 @@ export default function ResumeCard({ resume, onPreview, onDelete }: ResumeCardPr
     }
 
     axios
-      .get(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(resume.id), {
+      .get(DOCUMENT_DOWNLOAD(resume.id), {
         headers: {
           Authorization: `Bearer ${token}`,
         },

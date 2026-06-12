@@ -60,9 +60,9 @@ export default function Home() {
         <section id="faq" className="py-24 md:py-32 bg-[#04040a] relative border-t border-white/5">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             {/* FAQ Header */}
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl flex items-center justify-center gap-3">
-                <HelpCircle className="h-8 w-8 text-cyber-cyan" />
+            <div className="text-center mb-16 flex flex-col items-center">
+              <HelpCircle className="h-8 w-8 text-cyber-cyan mb-3" />
+              <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
                 Frequently Asked <span className="text-gradient-cyan-indigo">Questions</span>
               </h2>
               <p className="mt-4 text-sm text-zinc-400">

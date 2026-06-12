@@ -118,10 +118,10 @@ export default function HeroSection() {
               className="relative preserve-3d w-full max-w-105 aspect-4/5 cursor-grab active:cursor-grabbing flex items-center justify-center"
             >
               {/* Back card */}
-              <div className="absolute w-[85%] aspect-[1/1.4] rounded-2xl border border-white/5 bg-slate-900/40 backdrop-blur-md p-5 shadow-2xl -rotate-6 -translate-x-8 -translate-y-4 opacity-50 transition-transform duration-300 hover:rotate-0 hover:translate-x-0" />
+              <div className="absolute w-[85%] aspect-[1/1.4] rounded-2xl border border-white/5 bg-slate-900/40 backdrop-blur-md p-5 shadow-2xl -rotate-6 -translate-x-4 sm:-translate-x-8 -translate-y-2 sm:-translate-y-4 opacity-50 transition-transform duration-300 hover:rotate-0 hover:translate-x-0" />
 
               {/* Middle card */}
-              <div className="absolute w-[88%] aspect-[1/1.4] rounded-2xl border border-white/5 bg-zinc-900/60 backdrop-blur-md p-5 shadow-2xl rotate-3 translate-x-6 translate-y-2 opacity-75 transition-transform duration-300 hover:rotate-0 hover:translate-x-0" />
+              <div className="absolute w-[88%] aspect-[1/1.4] rounded-2xl border border-white/5 bg-zinc-900/60 backdrop-blur-md p-5 shadow-2xl rotate-3 translate-x-3 sm:translate-x-6 translate-y-1 sm:translate-y-2 opacity-75 transition-transform duration-300 hover:rotate-0 hover:translate-x-0" />
 
               {/* Main front card */}
               <motion.div
@@ -180,7 +180,7 @@ export default function HeroSection() {
               <motion.div
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-10 -left-6 glass-panel rounded-xl border border-white/10 py-2 px-3 flex items-center gap-2 shadow-lg z-10"
+                className="absolute top-10 -left-2 sm:-left-6 lg:-left-10 glass-panel rounded-xl border border-white/10 py-2 px-3 flex items-center gap-2 shadow-lg z-10"
               >
                 <div className="h-5 w-5 rounded-full bg-cyber-cyan/10 flex items-center justify-center">
                   <ShieldCheck className="h-3 w-3 text-cyber-cyan" />
@@ -195,7 +195,7 @@ export default function HeroSection() {
               <motion.div
                 animate={{ y: [0, 8, 0] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute bottom-10 -right-6 glass-panel rounded-xl border border-white/10 py-2 px-3 flex items-center gap-2 shadow-lg z-10"
+                className="absolute bottom-10 -right-2 sm:-right-6 lg:-right-10 glass-panel rounded-xl border border-white/10 py-2 px-3 flex items-center gap-2 shadow-lg z-10"
               >
                 <div className="h-5 w-5 rounded-full bg-cyber-purple/10 flex items-center justify-center">
                   <Download className="h-3 w-3 text-cyber-purple" />
