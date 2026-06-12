@@ -4,9 +4,16 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Mail, Lock, User, Shield, Eye, EyeOff, ShieldAlert, ArrowLeft, Loader2, Check, FileCheck2, Sparkles, UploadCloud, FolderHeart } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { login as reduxLogin } from "@/store/Reducers/AuthReducer";
+import { BackendService } from "@/utils/Backend";
+import { API_ENDPOINTS } from "@/constants/api";
+import { ROUTES } from "@/constants/routeConstants";
+import { GuestGuard } from "@/components/auth/Guards";
 
 export default function SignupPage() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,18 +43,35 @@ export default function SignupPage() {
 
     setIsLoading(true);
 
-    // Simulate API registration request
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsSuccess(true);
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1000);
-    }, 1500);
+    // Real API registration request
+    BackendService.Post(
+      {
+        url: API_ENDPOINTS.AUTH.SIGNUP,
+        data: { name, email, password },
+      },
+      {
+        success: (data: any) => {
+          // data contains { token, user: { id, name, email } }
+          dispatch(reduxLogin(data));
+          setIsLoading(false);
+          setIsSuccess(true);
+          setTimeout(() => {
+            router.push(ROUTES.DASHBOARD);
+          }, 1000);
+        },
+        failure: (err: any) => {
+          setIsLoading(false);
+          const errMsg = err?.response?.data?.message || err?.message || "Registration failed. Please try again.";
+          setError(Array.isArray(errMsg) ? errMsg[0] : errMsg);
+        },
+      }
+    );
   };
 
+
   return (
-    <div className="min-h-screen bg-[#030307] text-[#f8fafc] grid grid-cols-1 lg:grid-cols-12 relative overflow-hidden">
+    <GuestGuard>
+      <div className="min-h-screen bg-[#030307] text-[#f8fafc] grid grid-cols-1 lg:grid-cols-12 relative overflow-hidden">
       
       {/* Left Column - Visuals & Brand Info (Desktop only) */}
       <div className="hidden lg:flex lg:col-span-5 flex-col justify-between p-12 bg-black/30 border-r border-white/5 relative overflow-hidden bg-cyber-dots bg-cyber-grid">
@@ -58,7 +82,7 @@ export default function SignupPage() {
         {/* Header Branding */}
         <div className="flex items-center justify-between">
           <Link 
-            href="/" 
+            href={ROUTES.HOME} 
             className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -194,7 +218,7 @@ export default function SignupPage() {
         {/* Floating Back Link (Visible on mobile/tablet, hidden on desktop since it is in left panel) */}
         <div className="absolute top-6 left-6 lg:hidden">
           <Link 
-            href="/" 
+            href={ROUTES.HOME} 
             className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -358,7 +382,7 @@ export default function SignupPage() {
 
               <div className="mt-6 border-t border-white/5 pt-6 text-center text-xs text-zinc-500">
                 Already have an account?{" "}
-                <Link href="/login" className="font-bold text-cyber-cyan hover:underline transition-all">
+                <Link href={ROUTES.LOGIN} className="font-bold text-cyber-cyan hover:underline transition-all">
                   Sign in here
                 </Link>
               </div>
@@ -367,6 +391,7 @@ export default function SignupPage() {
         </motion.div>
       </div>
 
-    </div>
+      </div>
+    </GuestGuard>
   );
 }

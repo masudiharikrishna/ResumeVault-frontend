@@ -7,8 +7,15 @@ import ResumeCard from "@/components/dashboard/ResumeCard";
 import UploadModal from "@/components/dashboard/UploadModal";
 import ResumePreview from "@/components/dashboard/ResumePreview";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import { AuthGuard } from "@/components/auth/Guards";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/store/store";
+import { logout as reduxLogout, updateProfile as reduxUpdateProfile } from "@/store/Reducers/AuthReducer";
+import { BackendService } from "@/utils/Backend";
+import { API_ENDPOINTS } from "@/constants/api";
+import { ROUTES } from "@/constants/routeConstants";
 
 interface ResumeData {
   id: string;
@@ -18,62 +25,30 @@ interface ResumeData {
   updatedAt: string;
   type?: "resume" | "cover-letter";
   fileUrl?: string;
+  s3Key?: string;
+  iv?: string;
+  mimeType?: string;
 }
-
-const INITIAL_DOCUMENTS: ResumeData[] = [
-  {
-    id: "res_1",
-    title: "Senior Fullstack CV",
-    fileName: "Senior_Fullstack_Dev.pdf",
-    size: "2.4 MB",
-    updatedAt: "10 mins ago",
-    type: "resume"
-  },
-  {
-    id: "res_2",
-    title: "Product Designer Portfolio",
-    fileName: "Product_Designer_2026.pdf",
-    size: "5.2 MB",
-    updatedAt: "3 days ago",
-    type: "resume"
-  },
-  {
-    id: "res_3",
-    title: "Product Manager Resume",
-    fileName: "Product_Manager_Tech.pdf",
-    size: "2.1 MB",
-    updatedAt: "1 hr ago",
-    type: "resume"
-  },
-  {
-    id: "cov_1",
-    title: "Google Software Engineer Application",
-    fileName: "Google_Cover_Letter.pdf",
-    size: "1.2 MB",
-    updatedAt: "2 hrs ago",
-    type: "cover-letter"
-  },
-  {
-    id: "cov_2",
-    title: "Meta Product Designer Role",
-    fileName: "Meta_Designer_Letter.pdf",
-    size: "1.1 MB",
-    updatedAt: "4 days ago",
-    type: "cover-letter"
-  }
-];
 
 export default function DashboardPage() {
   const router = useRouter();
+  const dispatch = useDispatch();
+  
+  // Redux Auth State
+  const authState = useSelector((state: RootState) => state.AuthReducer);
+  const token = authState.userData?.token;
+  const reduxUser = authState.userData?.user;
+
+  // Safe user object for rendering
+  const user = {
+    name: reduxUser?.name || "User",
+    email: reduxUser?.email || "",
+  };
+
   const [activeTab, setActiveTab] = useState("resumes");
   const [searchQuery, setSearchQuery] = useState("");
-  const [documents, setDocuments] = useState<ResumeData[]>(INITIAL_DOCUMENTS);
-  
-  // User Profile State
-  const [user, setUser] = useState({
-    name: "John Doe",
-    email: "john.doe@student.edu"
-  });
+  const [documents, setDocuments] = useState<ResumeData[]>([]);
+  const [isDocsLoading, setIsDocsLoading] = useState(true);
 
   // Settings form states
   const [settingsName, setSettingsName] = useState(user.name);
@@ -85,6 +60,13 @@ export default function DashboardPage() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authState.status || !token) {
+      router.push(ROUTES.LOGIN);
+    }
+  }, [authState.status, token, router]);
+
   // Sync settings inputs when activeTab changes or user changes
   useEffect(() => {
     if (activeTab === "settings") {
@@ -95,7 +77,73 @@ export default function DashboardPage() {
       setSettingsError(null);
       setSettingsSuccess(false);
     }
-  }, [activeTab, user]);
+  }, [activeTab, reduxUser]);
+
+  // Fetch documents from backend
+  const fetchDocuments = () => {
+    if (!token) return;
+    const docType = activeTab === "resumes" ? "resume" : "cover-letter";
+    setIsDocsLoading(true);
+
+    BackendService.Get(
+      {
+        url: API_ENDPOINTS.DOCUMENTS.BASE,
+        accessToken: token,
+        data: {
+          query: searchQuery,
+          type: docType,
+        },
+      },
+      {
+        success: (data: any) => {
+          const mapped: ResumeData[] = data.map((d: any) => ({
+            id: d._id,
+            title: d.title,
+            fileName: d.fileName,
+            size: d.size,
+            updatedAt: new Date(d.updatedAt).toLocaleDateString(),
+            type: d.type,
+            s3Key: d.s3Key,
+            iv: d.iv,
+            mimeType: d.mimeType,
+          }));
+          setDocuments(mapped);
+          setIsDocsLoading(false);
+        },
+        failure: (err: any) => {
+          console.error("Failed to load documents", err);
+          setIsDocsLoading(false);
+        },
+      }
+    );
+  };
+
+  // Sync profile details on mount
+  useEffect(() => {
+    if (!token) return;
+
+    BackendService.Get(
+      {
+        url: API_ENDPOINTS.USERS.PROFILE,
+        accessToken: token,
+      },
+      {
+        success: (data: any) => {
+          dispatch(reduxUpdateProfile(data));
+        },
+        failure: (err: any) => {
+          console.error("Failed to fetch user profile", err);
+        },
+      }
+    );
+  }, [token]);
+
+  // Refresh documents list when tab, search query, or token changes
+  useEffect(() => {
+    if (activeTab !== "settings") {
+      fetchDocuments();
+    }
+  }, [activeTab, searchQuery, token]);
 
   // Modal states
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -106,38 +154,42 @@ export default function DashboardPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [resumeToDeleteId, setResumeToDeleteId] = useState<string | null>(null);
 
-  // Filter logic
-  const filteredDocs = documents.filter((doc) => {
-    const matchesTab = activeTab === "resumes"
-      ? (doc.type === "resume" || !doc.type)
-      : doc.type === "cover-letter";
-    
-    const matchesSearch = 
-      doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.fileName.toLowerCase().includes(searchQuery.toLowerCase());
-      
-    return matchesTab && matchesSearch;
-  });
-
   const handleDelete = (id: string) => {
     setResumeToDeleteId(id);
     setDeleteConfirmOpen(true);
   };
 
   const executeDelete = () => {
-    if (resumeToDeleteId) {
-      setDocuments((prev) => prev.filter((r) => r.id !== resumeToDeleteId));
-      if (selectedResume?.id === resumeToDeleteId) {
-        setPreviewOpen(false);
-        setSelectedResume(null);
-      }
+    if (resumeToDeleteId && token) {
+      BackendService.Delete(
+        {
+          url: API_ENDPOINTS.DOCUMENTS.DELETE(resumeToDeleteId),
+          accessToken: token,
+          data: {},
+        },
+        {
+          success: () => {
+            fetchDocuments();
+            if (selectedResume?.id === resumeToDeleteId) {
+              setPreviewOpen(false);
+              setSelectedResume(null);
+            }
+            setDeleteConfirmOpen(false);
+            setResumeToDeleteId(null);
+          },
+          failure: (err: any) => {
+            console.error("Failed to delete document", err);
+            alert("Failed to delete document: " + (err?.response?.data?.message || err?.message));
+            setDeleteConfirmOpen(false);
+            setResumeToDeleteId(null);
+          },
+        }
+      );
     }
-    setDeleteConfirmOpen(false);
-    setResumeToDeleteId(null);
   };
 
-  const handleUploadSuccess = (newDoc: ResumeData) => {
-    setDocuments((prev) => [newDoc, ...prev]);
+  const handleUploadSuccess = () => {
+    fetchDocuments();
   };
 
   const handleOpenPreview = (doc: ResumeData) => {
@@ -146,7 +198,7 @@ export default function DashboardPage() {
   };
 
   const handleLogout = () => {
-    router.push("/");
+    dispatch(reduxLogout());
   };
 
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -176,17 +228,36 @@ export default function DashboardPage() {
 
     setSettingsLoading(true);
 
-    // Simulate API update response
-    setTimeout(() => {
-      setSettingsLoading(false);
-      setSettingsSuccess(true);
-      setUser((prev) => ({ ...prev, name: settingsName }));
-      
-      setTimeout(() => {
-        setSettingsSuccess(false);
-        setActiveTab("resumes"); // Redirect back to resumes view
-      }, 1200);
-    }, 1500);
+    const updateData: any = { name: settingsName };
+    if (currentPassword && newPassword) {
+      updateData.currentPassword = currentPassword;
+      updateData.newPassword = newPassword;
+    }
+
+    BackendService.Patch(
+      {
+        url: API_ENDPOINTS.USERS.PROFILE,
+        accessToken: token,
+        data: updateData,
+      },
+      {
+        success: (data: any) => {
+          setSettingsLoading(false);
+          setSettingsSuccess(true);
+          dispatch(reduxUpdateProfile(data));
+          
+          setTimeout(() => {
+            setSettingsSuccess(false);
+            setActiveTab("resumes"); // Redirect back to resumes view
+          }, 1200);
+        },
+        failure: (err: any) => {
+          setSettingsLoading(false);
+          const errMsg = err?.response?.data?.message || err?.message || "Profile update failed.";
+          setSettingsError(Array.isArray(errMsg) ? errMsg[0] : errMsg);
+        },
+      }
+    );
   };
 
   // Compute stats
@@ -197,8 +268,11 @@ export default function DashboardPage() {
     return acc + sizeVal;
   }, 0).toFixed(1);
 
+  const filteredDocs = documents;
+
   return (
-    <div className="flex bg-[#030307] text-[#f8fafc] min-h-screen">
+    <AuthGuard>
+      <div className="flex bg-[#030307] text-[#f8fafc] min-h-screen">
       
       {/* Sidebar Navigation */}
       <Sidebar 
@@ -206,6 +280,7 @@ export default function DashboardPage() {
         setActiveTab={setActiveTab} 
         onUploadClick={() => setUploadOpen(true)} 
         user={user}
+        onLogout={handleLogout}
       />
 
       {/* Main Panel Content */}
@@ -436,7 +511,7 @@ export default function DashboardPage() {
             /* Vault Documents Grid view */
             <>
               {/* Top Banner stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="glass-panel rounded-2xl border border-white/5 bg-slate-900/10 p-5 flex items-center justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Vaulted CVs</span>
@@ -453,7 +528,7 @@ export default function DashboardPage() {
                   <Mail className="h-10 w-10 text-cyber-purple/20" />
                 </div>
 
-                <div className="glass-panel rounded-2xl border border-white/5 bg-slate-900/10 p-5 flex items-center justify-between col-span-1 md:col-span-1">
+                {/* <div className="glass-panel rounded-2xl border border-white/5 bg-slate-900/10 p-5 flex items-center justify-between col-span-1 md:col-span-1">
                   <div>
                     <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Cloud Storage Used</span>
                     <span className="text-2xl font-extrabold text-cyber-cyan mt-1 block">
@@ -461,7 +536,7 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <HardDrive className="h-10 w-10 text-cyber-cyan/10" />
-                </div>
+                </div> */}
               </div>
 
               {/* Documents Header */}
@@ -552,6 +627,7 @@ export default function DashboardPage() {
         }}
       />
 
-    </div>
+      </div>
+    </AuthGuard>
   );
 }

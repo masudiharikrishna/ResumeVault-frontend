@@ -1,7 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Briefcase, GraduationCap, Mail, Phone, Globe, Download } from "lucide-react";
+import { X, Briefcase, GraduationCap, Mail, Phone, Globe, Download, Loader2, AlertCircle } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import axios from "axios";
+import { API_ENDPOINTS } from "@/constants/api";
 
 interface ResumeData {
   id: string;
@@ -11,9 +16,10 @@ interface ResumeData {
   updatedAt: string;
   type?: "resume" | "cover-letter";
   fileUrl?: string;
+  s3Key?: string;
+  iv?: string;
+  mimeType?: string;
 }
-
-
 
 interface ResumePreviewProps {
   isOpen: boolean;
@@ -22,7 +28,96 @@ interface ResumePreviewProps {
 }
 
 export default function ResumePreview({ isOpen, resume, onClose }: ResumePreviewProps) {
+  const authState = useSelector((state: RootState) => state.AuthReducer);
+  const token = authState.userData?.token;
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let url: string | null = null;
+
+    if (isOpen && resume && token) {
+      // If it's a mock document without real s3Key, skip preview fetch
+      if (!resume.s3Key && !resume.fileUrl) {
+        setIsLoading(false);
+        setError("Preview not available for demo items");
+        return;
+      }
+
+      if (resume.fileUrl) {
+        setPreviewUrl(resume.fileUrl);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      axios
+        .get(API_ENDPOINTS.DOCUMENTS.PREVIEW(resume.id), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          responseType: "blob",
+        })
+        .then((response) => {
+          url = URL.createObjectURL(response.data);
+          setPreviewUrl(url);
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to load document preview", err);
+          setError("Could not retrieve secure preview. Please try downloading the file.");
+          setIsLoading(false);
+        });
+    }
+
+    return () => {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+      setPreviewUrl(null);
+    };
+  }, [isOpen, resume, token]);
+
+  const handleDownload = () => {
+    const activeUrl = previewUrl || resume?.fileUrl;
+    if (activeUrl && resume) {
+      const link = document.createElement("a");
+      link.href = activeUrl;
+      link.download = resume.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else if (resume && token) {
+      axios
+        .get(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(resume.id), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          responseType: "blob",
+        })
+        .then((response) => {
+          const url = URL.createObjectURL(response.data);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = resume.fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        })
+        .catch((err) => {
+          console.error("Failed to download document", err);
+          alert("Failed to download secure document. Please try again.");
+        });
+    }
+  };
+
   if (!resume) return null;
+
+  const activeUrl = previewUrl || resume.fileUrl;
 
   return (
     <AnimatePresence>
@@ -57,10 +152,20 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
             </div>
 
             {/* Document Content View */}
-            {resume.fileUrl ? (
+            {isLoading ? (
+              <div className="flex-1 flex flex-col items-center justify-center bg-cyber-dots">
+                <Loader2 className="h-8 w-8 text-cyber-cyan animate-spin mb-2" />
+                <p className="text-xs text-zinc-500">Decrypting secure document...</p>
+              </div>
+            ) : error ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-cyber-dots">
+                <AlertCircle className="h-8 w-8 text-rose-500 mb-2" />
+                <p className="text-xs text-zinc-400 font-semibold">{error}</p>
+              </div>
+            ) : activeUrl ? (
               <div className="flex-1 p-3 bg-cyber-dots flex flex-col h-full min-h-[500px]">
                 <iframe
-                  src={resume.fileUrl}
+                  src={activeUrl}
                   className="w-full flex-1 border border-white/10 rounded-xl bg-[#030307]/50 shadow-inner"
                   title={resume.title}
                 />
@@ -74,7 +179,7 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                     <div className="border-b border-white/5 pb-6 text-center md:text-left">
                       <h2 className="text-xl font-bold text-white tracking-tight">John Doe</h2>
                       <p className="text-xs text-cyber-purple font-semibold mt-0.5">Applicant Cover Letter</p>
-                      
+
                       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] text-zinc-400">
                         <span className="flex items-center justify-center md:justify-start gap-1.5">
                           <Mail className="h-3 w-3 text-zinc-500" />
@@ -116,7 +221,7 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                     <div className="text-center md:text-left border-b border-white/5 pb-6">
                       <h2 className="text-2xl font-bold text-white tracking-tight">John Doe</h2>
                       <h3 className="text-sm font-semibold text-cyber-cyan mt-1">{resume.title}</h3>
-                      
+
                       {/* Contact grid */}
                       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] text-zinc-400">
                         <span className="flex items-center justify-center md:justify-start gap-1.5">
@@ -131,9 +236,7 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                           <Globe className="h-3.5 w-3.5 text-zinc-500" />
                           linkedin.com/in/johndoe
                         </span>
-                        <span className="text-zinc-500 text-[10px]">
-                          Vault ID: {resume.id}
-                        </span>
+                        <span className="text-zinc-500 text-[10px]">Vault ID: {resume.id}</span>
                       </div>
                     </div>
 
@@ -207,8 +310,6 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
               </div>
             )}
 
-
-
             {/* Bottom Controls */}
             <div className="p-4 border-t border-white/5 bg-[#06060f] flex gap-3">
               <button
@@ -218,13 +319,14 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                 Close Preview
               </button>
               <button
-                className="flex-grow flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-cyber-indigo to-cyber-purple py-2.5 text-xs font-bold text-white shadow-md shadow-cyber-indigo/15 hover:scale-[1.01] transition-all cursor-pointer active:scale-98"
+                onClick={handleDownload}
+                disabled={!resume}
+                className="flex-grow flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-cyber-indigo to-cyber-purple py-2.5 text-xs font-bold text-white shadow-md shadow-cyber-indigo/15 hover:scale-[1.01] transition-all cursor-pointer active:scale-98 disabled:opacity-50"
               >
                 <Download className="h-4 w-4" />
                 Download PDF
               </button>
             </div>
-
           </motion.div>
         </div>
       )}

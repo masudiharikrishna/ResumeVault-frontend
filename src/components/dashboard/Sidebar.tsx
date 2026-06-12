@@ -5,19 +5,25 @@ import {
   Shield, FileText, LayoutTemplate, Sparkles, 
   Settings, LogOut, UploadCloud, GraduationCap, Mail
 } from "lucide-react";
+import { ROUTES } from "@/constants/routeConstants";
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onUploadClick: () => void;
   user: { name: string; email: string };
+  onLogout?: () => void;
 }
 
-export default function Sidebar({ activeTab, setActiveTab, onUploadClick, user }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, onUploadClick, user, onLogout }: SidebarProps) {
   const router = useRouter();
 
   const handleLogout = () => {
-    router.push("/");
+    if (onLogout) {
+      onLogout();
+    } else {
+      router.push(ROUTES.HOME);
+    }
   };
 
   const initials = user.name

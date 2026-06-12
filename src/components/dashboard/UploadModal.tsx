@@ -3,6 +3,10 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, UploadCloud, FileText, Check } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import { BackendService } from "@/utils/Backend";
+import { API_ENDPOINTS } from "@/constants/api";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -12,6 +16,8 @@ interface UploadModalProps {
 }
 
 export default function UploadModal({ isOpen, onClose, onUploadSuccess, documentType }: UploadModalProps) {
+  const authState = useSelector((state: RootState) => state.AuthReducer);
+  const token = authState.userData?.token;
 
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<{ name: string; size: string } | null>(null);
@@ -58,42 +64,83 @@ export default function UploadModal({ isOpen, onClose, onUploadSuccess, document
     if (!title) {
       setTitle(fileObj.name.replace(/\.[^/.]+$/, "").replace(/_/g, " "));
     }
-
-    setIsUploading(true);
-    setProgress(0);
-
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          setIsDone(true);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 100);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !title || !rawFile) return;
+    if (!file || !title || !rawFile || !token) return;
 
-    // Create a local blob URL for high-fidelity browser PDF rendering
-    const fileUrl = URL.createObjectURL(rawFile);
+    setIsUploading(true);
+    setProgress(15);
 
-    const newResume = {
-      id: (documentType === "cover-letter" ? "cov_" : "res_") + Date.now(),
-      title: title,
-      fileName: file.name,
-      size: file.size,
-      updatedAt: "Just now",
-      type: documentType,
-      fileUrl: fileUrl
-    };
+    // Create Form data
+    const formData = new FormData();
+    formData.append("file", rawFile);
 
-    onUploadSuccess(newResume);
-    handleClose();
+    // Upload to S3
+    BackendService.Form(
+      {
+        url: API_ENDPOINTS.DOCUMENTS.UPLOAD,
+        accessToken: token,
+        data: formData,
+      },
+      {
+        success: (uploadData: any) => {
+          setProgress(65);
+          
+          // Save Document Metadata
+          BackendService.Post(
+            {
+              url: API_ENDPOINTS.DOCUMENTS.BASE,
+              accessToken: token,
+              data: {
+                title: title,
+                type: documentType,
+                fileName: uploadData.fileName,
+                size: uploadData.size,
+                s3Key: uploadData.s3Key,
+                iv: uploadData.iv,
+                mimeType: uploadData.mimeType,
+              },
+            },
+            {
+              success: (newDoc: any) => {
+                setProgress(100);
+                setIsUploading(false);
+                setIsDone(true);
+
+                const mappedDoc = {
+                  id: newDoc._id,
+                  title: newDoc.title,
+                  fileName: newDoc.fileName,
+                  size: newDoc.size,
+                  updatedAt: new Date(newDoc.updatedAt).toLocaleDateString(),
+                  type: newDoc.type,
+                  s3Key: newDoc.s3Key,
+                  iv: newDoc.iv,
+                  mimeType: newDoc.mimeType,
+                };
+
+                onUploadSuccess(mappedDoc);
+                setTimeout(() => {
+                  handleClose();
+                }, 1000);
+              },
+              failure: (err: any) => {
+                setIsUploading(false);
+                console.error("Failed to save document metadata", err);
+                alert("Failed to save document info: " + (err?.response?.data?.message || err?.message));
+              },
+            }
+          );
+        },
+        failure: (err: any) => {
+          setIsUploading(false);
+          console.error("Failed to upload document to S3", err);
+          alert("Failed to upload document file: " + (err?.response?.data?.message || err?.message));
+        },
+      }
+    );
   };
 
   const handleClose = () => {
@@ -103,8 +150,12 @@ export default function UploadModal({ isOpen, onClose, onUploadSuccess, document
     setProgress(0);
     setIsUploading(false);
     setIsDone(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
     onClose();
   };
+
 
 
   return (
@@ -164,36 +215,61 @@ export default function UploadModal({ isOpen, onClose, onUploadSuccess, document
                     />
                   </div>
 
-                  {/* Dropzone */}
+                  {/* Dropzone / File Preview */}
                   <div>
                     <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
                       Select File
                     </label>
-                    <div
-                      onDragEnter={handleDrag}
-                      onDragOver={handleDrag}
-                      onDragLeave={handleDrag}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`min-h-[160px] flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-all ${
-                        dragActive
-                          ? "border-cyber-purple bg-cyber-purple/5"
-                          : "border-white/10 hover:border-cyber-indigo/40 hover:bg-white/[0.02]"
-                      }`}
-                    >
-                      <UploadCloud className="h-8 w-8 text-zinc-500 mb-2" />
-                      <span className="text-xs font-semibold text-white">
-                        Click or drag {documentType === "cover-letter" ? "cover letter" : "resume"} file here
-                      </span>
-                      <span className="text-[10px] text-zinc-500 mt-1">PDF, DOCX, or DOC up to 10MB</span>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileInput}
-                        accept=".pdf,.doc,.docx"
-                        className="hidden"
-                      />
-                    </div>
+                    {!file ? (
+                      <div
+                        onDragEnter={handleDrag}
+                        onDragOver={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`min-h-[160px] flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-all ${
+                          dragActive
+                            ? "border-cyber-purple bg-cyber-purple/5"
+                            : "border-white/10 hover:border-cyber-indigo/40 hover:bg-white/[0.02]"
+                        }`}
+                      >
+                        <UploadCloud className="h-8 w-8 text-zinc-500 mb-2" />
+                        <span className="text-xs font-semibold text-white">
+                          Click or drag {documentType === "cover-letter" ? "cover letter" : "resume"} file here
+                        </span>
+                        <span className="text-[10px] text-zinc-500 mt-1">PDF, DOCX, or DOC up to 10MB</span>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleFileInput}
+                          accept=".pdf,.doc,.docx"
+                          className="hidden"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 border border-white/10 bg-white/5 rounded-xl p-4 relative">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyber-indigo/15 text-cyber-indigo">
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-bold text-white truncate">{file.name}</h4>
+                          <p className="text-[10px] text-zinc-400">{file.size}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFile(null);
+                            setRawFile(null);
+                            if (fileInputRef.current) {
+                              fileInputRef.current.value = "";
+                            }
+                          }}
+                          className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                 </>
@@ -249,12 +325,13 @@ export default function UploadModal({ isOpen, onClose, onUploadSuccess, document
                 >
                   Cancel
                 </button>
-                {isDone && (
+                {file && !isDone && (
                   <button
                     type="submit"
-                    className="rounded-lg bg-gradient-to-r from-cyber-indigo to-cyber-purple py-2 px-4 text-xs font-bold text-white shadow-md shadow-cyber-indigo/15 hover:scale-[1.01] transition-all cursor-pointer active:scale-98"
+                    disabled={isUploading || !title.trim()}
+                    className="rounded-lg bg-gradient-to-r from-cyber-indigo to-cyber-purple py-2 px-4 text-xs font-bold text-white shadow-md shadow-cyber-indigo/15 hover:scale-[1.01] transition-all cursor-pointer active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Add to Vault
+                    {isUploading ? "Uploading..." : "Add to Vault"}
                   </button>
                 )}
               </div>

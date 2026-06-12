@@ -4,31 +4,57 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Mail, Lock, Shield, Eye, EyeOff, ShieldAlert, ArrowLeft, Loader2, Cpu, ShieldCheck, Key, FileText } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { login as reduxLogin } from "@/store/Reducers/AuthReducer";
+import { BackendService } from "@/utils/Backend";
+import { API_ENDPOINTS } from "@/constants/api";
+import { ROUTES } from "@/constants/routeConstants";
+import { GuestGuard } from "@/components/auth/Guards";
 
 export default function LoginPage() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsLoading(true);
 
-    // Simulate API authorization response
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsSuccess(true);
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1000);
-    }, 1500);
+    // Real API authorization request
+    BackendService.Post(
+      {
+        url: API_ENDPOINTS.AUTH.LOGIN,
+        data: { email, password },
+      },
+      {
+        success: (data: any) => {
+          // data contains { token, user: { id, name, email } }
+          dispatch(reduxLogin(data));
+          setIsLoading(false);
+          setIsSuccess(true);
+          setTimeout(() => {
+            router.push(ROUTES.DASHBOARD);
+          }, 1000);
+        },
+        failure: (err: any) => {
+          setIsLoading(false);
+          const errMsg = err?.response?.data?.message || err?.message || "Invalid credentials. Please try again.";
+          setError(Array.isArray(errMsg) ? errMsg[0] : errMsg);
+        },
+      }
+    );
   };
 
+
   return (
-    <div className="min-h-screen bg-[#030307] text-[#f8fafc] grid grid-cols-1 lg:grid-cols-12 relative overflow-hidden">
+    <GuestGuard>
+      <div className="min-h-screen bg-[#030307] text-[#f8fafc] grid grid-cols-1 lg:grid-cols-12 relative overflow-hidden">
       
       {/* Left Column - Visuals & Brand Info (Desktop only) */}
       <div className="hidden lg:flex lg:col-span-5 flex-col justify-between p-12 bg-black/30 border-r border-white/5 relative overflow-hidden bg-cyber-dots bg-cyber-grid">
@@ -39,7 +65,7 @@ export default function LoginPage() {
         {/* Header Branding */}
         <div className="flex items-center justify-between">
           <Link 
-            href="/" 
+            href={ROUTES.HOME} 
             className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -168,7 +194,7 @@ export default function LoginPage() {
         {/* Floating Back Link (Visible on mobile/tablet, hidden on desktop since it is in left panel) */}
         <div className="absolute top-6 left-6 lg:hidden">
           <Link 
-            href="/" 
+            href={ROUTES.HOME} 
             className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -221,6 +247,17 @@ export default function LoginPage() {
                   <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider block">Secure Cloud Gate</p>
                 </div>
               </div>
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-5 rounded-lg border border-rose-500/20 bg-rose-500/5 p-3 flex gap-2 items-center text-xs text-rose-400"
+                >
+                  <ShieldAlert className="h-4.5 w-4.5 shrink-0" />
+                  <span>{error}</span>
+                </motion.div>
+              )}
 
               <form onSubmit={handleSubmit} className="mt-8 space-y-4">
                 {/* Email Address */}
@@ -277,7 +314,7 @@ export default function LoginPage() {
 
               <div className="mt-8 border-t border-white/5 pt-6 text-center text-xs text-zinc-500">
                 Don't have an account?{" "}
-                <Link href="/signup" className="font-bold text-cyber-cyan hover:underline transition-all">
+                <Link href={ROUTES.SIGNUP} className="font-bold text-cyber-cyan hover:underline transition-all">
                   Create one now
                 </Link>
               </div>
@@ -286,6 +323,7 @@ export default function LoginPage() {
         </motion.div>
       </div>
 
-    </div>
+      </div>
+    </GuestGuard>
   );
 }
