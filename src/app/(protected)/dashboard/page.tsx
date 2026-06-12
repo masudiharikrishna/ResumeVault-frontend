@@ -7,6 +7,7 @@ import ResumeCard from "@/components/dashboard/ResumeCard";
 import UploadModal from "@/components/dashboard/UploadModal";
 import ResumePreview from "@/components/dashboard/ResumePreview";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import Pagination from "@/components/ui/Pagination";
 
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -50,6 +51,39 @@ export default function DashboardPage() {
   const [documents, setDocuments] = useState<ResumeData[]>([]);
   const [isDocsLoading, setIsDocsLoading] = useState(true);
 
+  // Pagination & Count states
+  const ITEMS_PER_PAGE = 6;
+  const [queryParams, setQueryParams] = useState({ page: 1, query: "" });
+
+  // Debounce search query input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setQueryParams((prev) => {
+        if (prev.query === searchQuery) return prev;
+        return { page: 1, query: searchQuery };
+      });
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const [totalResumes, setTotalResumes] = useState(0);
+  const [totalCoverLetters, setTotalCoverLetters] = useState(0);
+
+  // Handlers for client-side state transitions
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    if (val === "") {
+      setQueryParams({ page: 1, query: "" });
+    }
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSearchQuery("");
+    setQueryParams({ page: 1, query: "" });
+  };
+
   // Settings form states
   const [settingsName, setSettingsName] = useState(user.name);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -90,13 +124,16 @@ export default function DashboardPage() {
         url: DOCUMENTS_BASE,
         accessToken: token,
         data: {
-          query: searchQuery,
+          query: queryParams.query,
           type: docType,
+          page: queryParams.page,
+          limit: ITEMS_PER_PAGE,
         },
       },
       {
         success: (data: any) => {
-          const mapped: ResumeData[] = data.map((d: any) => ({
+          const docsArray = data.docs || [];
+          const mapped: ResumeData[] = docsArray.map((d: any) => ({
             id: d._id,
             title: d.title,
             fileName: d.fileName,
@@ -108,6 +145,10 @@ export default function DashboardPage() {
             mimeType: d.mimeType,
           }));
           setDocuments(mapped);
+          setTotalResumes(data.counts?.resume || 0);
+          setTotalCoverLetters(data.counts?.["cover-letter"] || 0);
+          
+          
           setIsDocsLoading(false);
         },
         failure: (err: any) => {
@@ -118,7 +159,7 @@ export default function DashboardPage() {
     );
   };
 
-  // Sync profile details on mount
+  // Sync profile details and total counts on mount
   useEffect(() => {
     if (!token) return;
 
@@ -136,14 +177,43 @@ export default function DashboardPage() {
         },
       }
     );
+
+    // Initial silent counts fetch
+    BackendService.Get(
+      {
+        url: DOCUMENTS_BASE,
+        accessToken: token,
+        data: { type: "resume", limit: 1 },
+      },
+      {
+        success: (data: any) => {
+          setTotalResumes(data.total || 0);
+        },
+        failure: () => {}
+      }
+    );
+
+    BackendService.Get(
+      {
+        url: DOCUMENTS_BASE,
+        accessToken: token,
+        data: { type: "cover-letter", limit: 1 },
+      },
+      {
+        success: (data: any) => {
+          setTotalCoverLetters(data.total || 0);
+        },
+        failure: () => {}
+      }
+    );
   }, [token]);
 
-  // Refresh documents list when tab, search query, or token changes
+  // Refresh documents list when tab, query parameters, or token changes
   useEffect(() => {
     if (activeTab !== "settings") {
       fetchDocuments();
     }
-  }, [activeTab, searchQuery, token]);
+  }, [activeTab, queryParams.page, queryParams.query, token]);
 
   // Modal states
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -261,14 +331,18 @@ export default function DashboardPage() {
   };
 
   // Compute stats
-  const resumesCount = documents.filter(d => d.type === "resume" || !d.type).length;
-  const coverLettersCount = documents.filter(d => d.type === "cover-letter").length;
+  const resumesCount = totalResumes;
+  const coverLettersCount = totalCoverLetters;
+  
+  const totalItems = activeTab === "resumes" ? totalResumes : totalCoverLetters;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const validCurrentPage = Math.min(Math.max(queryParams.page, 1), totalPages || 1);
+  const paginatedDocs = documents;
+
   const totalSizeMB = documents.reduce((acc, r) => {
     const sizeVal = parseFloat(r.size.replace(/[^\d.]/g, "")) || 0;
     return acc + sizeVal;
   }, 0).toFixed(1);
-
-  const filteredDocs = documents;
 
   return (
 
@@ -277,7 +351,7 @@ export default function DashboardPage() {
       {/* Sidebar Navigation */}
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={handleTabChange} 
         onUploadClick={() => setUploadOpen(true)} 
         user={user}
         onLogout={handleLogout}
@@ -297,7 +371,7 @@ export default function DashboardPage() {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder={activeTab === "resumes" ? "Search resumes in cloud..." : "Search cover letters..."}
                   className="w-full rounded-full bg-black/30 border border-white/10 py-1.5 pl-9 pr-4 text-xs text-white placeholder-zinc-500 outline-none focus:border-cyber-indigo/50"
                 />
@@ -386,7 +460,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="flex justify-between items-center">
                           <span>Cover Letters:</span>
-                          <span className="text-white font-bold">{coverLettersCount} Files</span>
+                          <span className="text-white font-bold">{coverLettersCount || 0} Files</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span>Cloud Security:</span>
@@ -546,7 +620,7 @@ export default function DashboardPage() {
                     {activeTab === "resumes" ? "Resume Vault" : "Cover Letter Vault"}
                   </h3>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Showing {filteredDocs.length} of {activeTab === "resumes" ? resumesCount : coverLettersCount} matching {activeTab === "resumes" ? "resumes" : "cover letters"}
+                    Showing {paginatedDocs.length} of {totalItems} matching {activeTab === "resumes" ? "resumes" : "cover letters"} (Page {validCurrentPage} of {totalPages || 1})
                   </p>
                 </div>
                 
@@ -559,17 +633,29 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              {/* Grid Layout */}
-              {filteredDocs.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredDocs.map((doc) => (
-                    <ResumeCard
-                      key={doc.id}
-                      resume={doc}
-                      onPreview={handleOpenPreview}
-                      onDelete={handleDelete}
-                    />
-                  ))}
+              {/* Grid Layout or Loading Spinner or Empty State */}
+              {isDocsLoading ? (
+                <div className="flex flex-col items-center justify-center py-24 min-h-[300px] rounded-2xl border border-white/5 bg-white/[0.01]">
+                  <Loader2 className="h-10 w-10 text-cyber-cyan animate-spin" />
+                  <p className="text-xs text-zinc-500 mt-3 font-semibold">Loading vault files...</p>
+                </div>
+              ) : paginatedDocs.length > 0 ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {paginatedDocs.map((doc) => (
+                      <ResumeCard
+                        key={doc.id}
+                        resume={doc}
+                        onPreview={handleOpenPreview}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
+                  <Pagination
+                    currentPage={validCurrentPage}
+                    totalPages={totalPages}
+                    onPageChange={(newPage) => setQueryParams((prev) => ({ ...prev, page: newPage }))}
+                  />
                 </div>
               ) : (
                 /* Empty State */
@@ -582,7 +668,7 @@ export default function DashboardPage() {
                     We couldn't find any vaulted {activeTab === "resumes" ? "CVs" : "cover letters"} matching your active search query.
                   </p>
                   <button
-                    onClick={() => setSearchQuery("")}
+                    onClick={() => handleSearchChange("")}
                     className="mt-4 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white transition-colors cursor-pointer"
                   >
                     Reset Search
@@ -628,6 +714,5 @@ export default function DashboardPage() {
       />
 
       </div>
-
   );
 }
