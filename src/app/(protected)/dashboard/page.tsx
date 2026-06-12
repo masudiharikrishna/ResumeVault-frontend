@@ -97,7 +97,7 @@ export default function DashboardPage() {
   // Redirect if not authenticated
   useEffect(() => {
     if (!authState.status || !token) {
-      router.push(ROUTES.LOGIN);
+      router.replace(ROUTES.LOGIN);
     }
   }, [authState.status, token, router]);
 
