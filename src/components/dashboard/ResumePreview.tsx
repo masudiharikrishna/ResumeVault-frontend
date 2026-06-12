@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Briefcase, GraduationCap, Mail, Phone, Globe, Download, Loader2, AlertCircle } from "lucide-react";
+import {
+  X,
+  Briefcase,
+  GraduationCap,
+  Mail,
+  Phone,
+  Globe,
+  Download,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import axios from "axios";
@@ -27,7 +37,11 @@ interface ResumePreviewProps {
   onClose: () => void;
 }
 
-export default function ResumePreview({ isOpen, resume, onClose }: ResumePreviewProps) {
+export default function ResumePreview({
+  isOpen,
+  resume,
+  onClose,
+}: ResumePreviewProps) {
   const authState = useSelector((state: RootState) => state.AuthReducer);
   const token = authState.userData?.token;
 
@@ -68,7 +82,9 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
         })
         .catch((err) => {
           console.error("Failed to load document preview", err);
-          setError("Could not retrieve secure preview. Please try downloading the file.");
+          setError(
+            "Could not retrieve secure preview. Please try downloading the file.",
+          );
           setIsLoading(false);
         });
     }
@@ -142,7 +158,9 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
           >
             {/* Top Navigation */}
             <div className="p-4 border-b border-white/5 bg-[#06060f] flex items-center justify-between">
-              <span className="text-[10px] text-zinc-500 font-mono truncate max-w-[250px]">{resume.fileName}</span>
+              <span className="text-[10px] text-zinc-500 font-mono truncate max-w-[250px]">
+                {resume.fileName}
+              </span>
               <button
                 onClick={onClose}
                 className="p-1.5 rounded-lg border border-white/5 hover:border-white/10 text-zinc-400 hover:text-white cursor-pointer"
@@ -155,7 +173,9 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
             {isLoading ? (
               <div className="flex-1 flex flex-col items-center justify-center bg-cyber-dots">
                 <Loader2 className="h-8 w-8 text-cyber-cyan animate-spin mb-2" />
-                <p className="text-xs text-zinc-500">Decrypting secure document...</p>
+                <p className="text-xs text-zinc-500">
+                  Decrypting secure document...
+                </p>
               </div>
             ) : error ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-cyber-dots">
@@ -177,8 +197,12 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                   <div className="space-y-6">
                     {/* Sender Info */}
                     <div className="border-b border-white/5 pb-6 text-center md:text-left">
-                      <h2 className="text-xl font-bold text-white tracking-tight">John Doe</h2>
-                      <p className="text-xs text-cyber-purple font-semibold mt-0.5">Applicant Cover Letter</p>
+                      <h2 className="text-xl font-bold text-white tracking-tight">
+                        John Doe
+                      </h2>
+                      <p className="text-xs text-cyber-purple font-semibold mt-0.5">
+                        Applicant Cover Letter
+                      </p>
 
                       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] text-zinc-400">
                         <span className="flex items-center justify-center md:justify-start gap-1.5">
@@ -187,28 +211,47 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                         </span>
                         <span>Phone: +1 (555) 019-2834</span>
                         <span>Address: San Francisco, CA</span>
-                        <span className="text-zinc-500">Vault ID: {resume.id}</span>
+                        <span className="text-zinc-500">
+                          Vault ID: {resume.id}
+                        </span>
                       </div>
                     </div>
 
                     {/* Letter Details */}
                     <div className="text-[11px] text-zinc-400 space-y-1">
-                      <p className="font-semibold text-white">Date: June 11, 2026</p>
-                      <p className="mt-4 text-zinc-300 font-semibold">To: Hiring Manager</p>
-                      <p className="text-zinc-500">Subject: Application for {resume.title}</p>
+                      <p className="font-semibold text-white">
+                        Date: June 11, 2026
+                      </p>
+                      <p className="mt-4 text-zinc-300 font-semibold">
+                        To: Hiring Manager
+                      </p>
+                      <p className="text-zinc-500">
+                        Subject: Application for {resume.title}
+                      </p>
                     </div>
 
                     {/* Letter Body */}
                     <div className="space-y-4 text-xs text-zinc-300 leading-relaxed font-sans pt-2">
                       <p>Dear Hiring Manager,</p>
                       <p>
-                        I am writing to express my enthusiastic interest in the professional opportunities within your organization. Having followed your company's growth, I am inspired by your commitment to innovation and technical excellence.
+                        I am writing to express my enthusiastic interest in the
+                        professional opportunities within your organization.
+                        Having followed your company's growth, I am inspired by
+                        your commitment to innovation and technical excellence.
                       </p>
                       <p>
-                        In my previous roles, I have focused on solving complex workflow problems, building high-performance systems, and collaborating with cross-functional teams to deliver stable, user-first applications. My goal is to apply these experiences directly to support your team's objectives.
+                        In my previous roles, I have focused on solving complex
+                        workflow problems, building high-performance systems,
+                        and collaborating with cross-functional teams to deliver
+                        stable, user-first applications. My goal is to apply
+                        these experiences directly to support your team's
+                        objectives.
                       </p>
                       <p>
-                        This Cover Letter and my corresponding CV have been securely archived and synced via ResumeVault. I would welcome the opportunity to discuss my qualifications and how my background aligns with your current hiring goals.
+                        This Cover Letter and my corresponding CV have been
+                        securely archived and synced via ResumeVault. I would
+                        welcome the opportunity to discuss my qualifications and
+                        how my background aligns with your current hiring goals.
                       </p>
                       <p className="pt-4">Sincerely,</p>
                       <p className="font-bold text-white">John Doe</p>
@@ -219,8 +262,12 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                   <>
                     {/* Header Profile */}
                     <div className="text-center md:text-left border-b border-white/5 pb-6">
-                      <h2 className="text-2xl font-bold text-white tracking-tight">John Doe</h2>
-                      <h3 className="text-sm font-semibold text-cyber-cyan mt-1">{resume.title}</h3>
+                      <h2 className="text-2xl font-bold text-white tracking-tight">
+                        John Doe
+                      </h2>
+                      <h3 className="text-sm font-semibold text-cyber-cyan mt-1">
+                        {resume.title}
+                      </h3>
 
                       {/* Contact grid */}
                       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] text-zinc-400">
@@ -236,15 +283,22 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                           <Globe className="h-3.5 w-3.5 text-zinc-500" />
                           linkedin.com/in/johndoe
                         </span>
-                        <span className="text-zinc-500 text-[10px]">Vault ID: {resume.id}</span>
+                        <span className="text-zinc-500 text-[10px]">
+                          Vault ID: {resume.id}
+                        </span>
                       </div>
                     </div>
 
                     {/* Professional Summary */}
                     <div>
-                      <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Professional Profile</h4>
+                      <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
+                        Professional Profile
+                      </h4>
                       <p className="text-xs text-zinc-300 leading-relaxed">
-                        Highly motivated and results-driven professional. Proven history of optimizing execution frameworks, working collaboratively within cross-functional teams, and executing solutions to complex challenges.
+                        Highly motivated and results-driven professional. Proven
+                        history of optimizing execution frameworks, working
+                        collaboratively within cross-functional teams, and
+                        executing solutions to complex challenges.
                       </p>
                     </div>
 
@@ -259,15 +313,30 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                           <div className="absolute h-2 w-2 rounded-full bg-cyber-purple -left-[5px] top-1.5" />
                           <div className="flex items-start justify-between text-xs">
                             <div>
-                              <h5 className="font-bold text-white leading-none">Senior Specialist</h5>
-                              <span className="text-[10px] text-zinc-400 mt-1 block">TechScale Solutions</span>
+                              <h5 className="font-bold text-white leading-none">
+                                Senior Specialist
+                              </h5>
+                              <span className="text-[10px] text-zinc-400 mt-1 block">
+                                TechScale Solutions
+                              </span>
                             </div>
-                            <span className="text-[9px] text-zinc-500 font-semibold">2024 - Present</span>
+                            <span className="text-[9px] text-zinc-500 font-semibold">
+                              2024 - Present
+                            </span>
                           </div>
                           <ul className="mt-2 space-y-1.5 list-disc list-outside pl-3.5 text-[11px] text-zinc-400 leading-relaxed">
-                            <li>Architected core application optimizations, increasing rendering performance by 35%.</li>
-                            <li>Orchestrated container deployments, handling over 2M daily API queries.</li>
-                            <li>Mentored team members in project design and microservice practices.</li>
+                            <li>
+                              Architected core application optimizations,
+                              increasing rendering performance by 35%.
+                            </li>
+                            <li>
+                              Orchestrated container deployments, handling over
+                              2M daily API queries.
+                            </li>
+                            <li>
+                              Mentored team members in project design and
+                              microservice practices.
+                            </li>
                           </ul>
                         </div>
 
@@ -275,14 +344,26 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                           <div className="absolute h-2 w-2 rounded-full bg-cyber-purple -left-[5px] top-1.5" />
                           <div className="flex items-start justify-between text-xs">
                             <div>
-                              <h5 className="font-bold text-white leading-none">Associate Specialist</h5>
-                              <span className="text-[10px] text-zinc-400 mt-1 block">CloudFlow Inc</span>
+                              <h5 className="font-bold text-white leading-none">
+                                Associate Specialist
+                              </h5>
+                              <span className="text-[10px] text-zinc-400 mt-1 block">
+                                CloudFlow Inc
+                              </span>
                             </div>
-                            <span className="text-[9px] text-zinc-500 font-semibold">2021 - 2024</span>
+                            <span className="text-[9px] text-zinc-500 font-semibold">
+                              2021 - 2024
+                            </span>
                           </div>
                           <ul className="mt-2 space-y-1.5 list-disc list-outside pl-3.5 text-[11px] text-zinc-400 leading-relaxed">
-                            <li>Implemented checkout platforms and real-time user notification dashboards.</li>
-                            <li>Overhauled search indexes, reducing lookup latencies by 20%.</li>
+                            <li>
+                              Implemented checkout platforms and real-time user
+                              notification dashboards.
+                            </li>
+                            <li>
+                              Overhauled search indexes, reducing lookup
+                              latencies by 20%.
+                            </li>
                           </ul>
                         </div>
                       </div>
@@ -298,10 +379,16 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
                         <div className="absolute h-2 w-2 rounded-full bg-cyber-cyan -left-[5px] top-1.5" />
                         <div className="flex justify-between items-start">
                           <div>
-                            <h5 className="font-bold text-white">B.S. in Computer Science & Engineering</h5>
-                            <span className="text-[10px] text-zinc-400 mt-0.5 block">Stanford University</span>
+                            <h5 className="font-bold text-white">
+                              B.S. in Computer Science & Engineering
+                            </h5>
+                            <span className="text-[10px] text-zinc-400 mt-0.5 block">
+                              Stanford University
+                            </span>
                           </div>
-                          <span className="text-[9px] text-zinc-500 font-semibold">Graduated 2020</span>
+                          <span className="text-[9px] text-zinc-500 font-semibold">
+                            Graduated 2020
+                          </span>
                         </div>
                       </div>
                     </div>
