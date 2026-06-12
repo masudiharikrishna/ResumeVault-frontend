@@ -140,12 +140,12 @@ export default function VaultShowcase() {
                       key={resume.id}
                       className="flex items-center justify-between rounded-xl bg-white/5 border border-white/5 p-4 hover:bg-white/10 hover:border-white/10 transition-all group"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyber-indigo/15 border border-cyber-indigo/35 text-cyber-indigo group-hover:bg-cyber-indigo/20">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyber-indigo/15 border border-cyber-indigo/35 text-cyber-indigo group-hover:bg-cyber-indigo/20">
                           <FileText className="h-5 w-5" />
                         </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-white tracking-tight">{resume.name}</h4>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-white tracking-tight truncate">{resume.name}</h4>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[10px] text-zinc-400">{resume.size}</span>
                             <span className="h-1 w-1 rounded-full bg-zinc-600" />

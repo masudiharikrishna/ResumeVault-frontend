@@ -7,9 +7,9 @@ import { Mail, Lock, User, Shield, Eye, EyeOff, ShieldAlert, ArrowLeft, Loader2,
 import { useDispatch } from "react-redux";
 import { login as reduxLogin } from "@/store/Reducers/AuthReducer";
 import { BackendService } from "@/utils/Backend";
-import { API_ENDPOINTS } from "@/constants/api";
+import { AUTH_SIGNUP } from "@/constants/ApiConstants";
 import { ROUTES } from "@/constants/routeConstants";
-import { GuestGuard } from "@/components/auth/Guards";
+
 
 export default function SignupPage() {
   const router = useRouter();
@@ -46,7 +46,7 @@ export default function SignupPage() {
     // Real API registration request
     BackendService.Post(
       {
-        url: API_ENDPOINTS.AUTH.SIGNUP,
+        url: AUTH_SIGNUP,
         data: { name, email, password },
       },
       {
@@ -70,7 +70,7 @@ export default function SignupPage() {
 
 
   return (
-    <GuestGuard>
+
       <div className="min-h-screen bg-[#030307] text-[#f8fafc] grid grid-cols-1 lg:grid-cols-12 relative overflow-hidden">
       
       {/* Left Column - Visuals & Brand Info (Desktop only) */}
@@ -392,6 +392,6 @@ export default function SignupPage() {
       </div>
 
       </div>
-    </GuestGuard>
+
   );
 }

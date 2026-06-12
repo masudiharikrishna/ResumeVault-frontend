@@ -6,7 +6,7 @@ import { X, Briefcase, GraduationCap, Mail, Phone, Globe, Download, Loader2, Ale
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import axios from "axios";
-import { API_ENDPOINTS } from "@/constants/api";
+import { DOCUMENT_PREVIEW, DOCUMENT_DOWNLOAD } from "@/constants/ApiConstants";
 
 interface ResumeData {
   id: string;
@@ -55,7 +55,7 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
       setError(null);
 
       axios
-        .get(API_ENDPOINTS.DOCUMENTS.PREVIEW(resume.id), {
+        .get(DOCUMENT_PREVIEW(resume.id), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -92,7 +92,7 @@ export default function ResumePreview({ isOpen, resume, onClose }: ResumePreview
       document.body.removeChild(link);
     } else if (resume && token) {
       axios
-        .get(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(resume.id), {
+        .get(DOCUMENT_DOWNLOAD(resume.id), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
